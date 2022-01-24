@@ -12,12 +12,19 @@ const userAuthSchema = new Schema({
     },
     email: {
         type: String,
-        required: true,
+        required: [true, 'Email is required'],
+        validate: {
+            validator: function(v) {
+                // Validate email format using regex
+                return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(v);
+            },
+            message: props => `{props.value} is not a valid email address!`
+        },
         unique: true
     },
     password: {
         type: String,
-        required: true
+        required: [true, 'Password is required']
     },
     token: {
         type: String,
