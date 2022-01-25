@@ -1,6 +1,8 @@
 require('dotenv').config(); // Load .env file
 require('./config/database').connect(); // Load database configuration
 const express = require('express');
+const jwt = require('jsonwebtoken');
+
 const User = require('./models/User');
 
 const app = express();
@@ -35,26 +37,29 @@ app.get("/api/v1/register", async (req, res) => {
         return ;
     };
 
-    // Create a new user
-    const user = new User({
-        firstname,
-        lastname,
-        email,
-        password
-    });
-    // TODO: Generate a token
-
-    // Save the user
     try {
-        const newUser = await user.save();
-        res.status(201).json(newUser);
-        return ;
-    }
-    catch (err) {
-        res.status(400).json({
-            message: err.message
+        // Create a new user
+        const user = await User.create({
+            firstname,
+            lastname,
+            email: email.toLowerCase(),
+            password
         });
-        return ;
+        const token = jwt.sign({
+            user_id: user._id,
+        },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: '1h'
+            }
+        );
+
+        user.token = token;
+
+        res.status(201).json(user);
+        return;
+    } catch (error) {
+        console.log(error);
     }
 })
 
