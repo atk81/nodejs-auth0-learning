@@ -21,6 +21,7 @@ const userAuthSchema = new Schema({
             },
             message: props => `${props.value} is not a valid email address!`
         },
+        set: v => v.toLowerCase(), // Set email to lowercase
         unique: true
     },
     password: {

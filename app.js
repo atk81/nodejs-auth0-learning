@@ -2,6 +2,7 @@ require('dotenv').config(); // Load .env file
 require('./config/database').connect(); // Load database configuration
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const User = require('./models/User');
 
@@ -42,7 +43,7 @@ app.get("/api/v1/register", async (req, res) => {
         const user = await User.create({
             firstname,
             lastname,
-            email: email.toLowerCase(),
+            email,
             password
         });
         const token = jwt.sign({
@@ -55,11 +56,68 @@ app.get("/api/v1/register", async (req, res) => {
         );
 
         user.token = token;
+        user.password = undefined // Remove password from response
 
         res.status(201).json(user);
         return;
     } catch (error) {
         console.log(error);
+        res.send(500).json({
+            message: "Something went wrong"
+        });
+    }
+})
+
+app.get("/api/v1/login", async (req, res) => {
+    let { email, password } = req.body;
+    // Validate the data
+    if (!email || !password) {
+        res.status(400).json({
+            message: "Please enter all fields"
+        });
+        return;
+    }
+    // Check if email exists
+    // remove all the white spaces from the email
+    email = email.trim();
+    const userExits = await User.findOne({ email: email });
+    if (!userExits) {
+        res.status(400).json({
+            message: "Email is not registered"
+        });
+        return;
+    }
+
+    // Check if password is correct
+    const isPasswordCorrect = await bcrypt.compare(password, userExits.password);
+    if (!isPasswordCorrect) {
+        res.status(400).json({
+            message: "Password is incorrect"
+        });
+        return;
+    }
+
+    try {
+        // Create a jwt token
+        const token = jwt.sign({
+            user_id: userExits._id,
+        },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: '1h'
+            }
+        );
+
+        userExits.token = token;
+        userExits.password = undefined // Remove password from response
+
+        res.status(200).json(userExits);
+        return;
+    } catch (error) {
+        console.log(error);
+        res.send(500).json({
+            message: "Something went wrong"
+        });
     }
 })
 
