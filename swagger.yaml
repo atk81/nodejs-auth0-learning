@@ -19,6 +19,13 @@ servers:
         enum:
           - "v1"
         default: "v1"
+  - url: https://auth0-learning.herokuapp.com/api/{version}
+    description: "Production Development server"
+    variables:
+      version:
+        enum:
+          - "v1"
+        default: "v1"
 
 components:
   securitySchemes:
