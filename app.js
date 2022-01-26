@@ -9,12 +9,19 @@ const auth = require('./middleware/auth');
 const User = require('./models/User');
 
 const app = express();
+
+// Add Swagger documentation
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const swaggerDocument = YAML.load('./swagger.yaml');
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Add a middleware to accept json data
 app.use(express.json());
 // Add a middleware to accept cookies
 app.use(cookieParser());
 
-app.get("/api/v1/register", async (req, res) => {
+app.post("/api/v1/register", async (req, res) => {
     let {firstname, lastname, email, password} = req.body;
     // Validate the data
     if (!firstname || !lastname || !email || !password) {
@@ -50,19 +57,10 @@ app.get("/api/v1/register", async (req, res) => {
             email,
             password
         });
-        const token = jwt.sign({
-            user_id: user._id,
-        },
-            process.env.JWT_SECRET,
-            {
-                expiresIn: '1h'
-            }
-        );
-
-        user.token = token;
         user.password = undefined // Remove password from response
-
-        res.status(201).json(user);
+        res.status(201).json({
+            message: "User created successfully",
+        });
         return;
     } catch (error) {
         console.log(error);
@@ -72,7 +70,7 @@ app.get("/api/v1/register", async (req, res) => {
     }
 });
 
-app.get("/api/v1/login", async (req, res) => {
+app.post("/api/v1/login", async (req, res) => {
     let { email, password } = req.body;
     // Validate the data
     if (!email || !password) {
@@ -125,6 +123,21 @@ app.get("/api/v1/login", async (req, res) => {
     }
 });
 
+app.post("/api/v1/logout", auth, async (req,res) => {
+    try {
+        res.clearCookie('token');
+        res.status(200).json({
+            message: "Logged out successfully"
+        });
+        return;
+    } catch (error) {
+        console.log(error);
+        res.send(500).json({
+            message: "Something went wrong"
+        });
+    }
+});
+
 app.get("/api/v1/dashboard", auth, async(req,res)=>{
     try {
         const user = await User.findOne({ _id: req.user_id });
@@ -143,8 +156,11 @@ app.get("/api/v1/dashboard", auth, async(req,res)=>{
     }
 });
 
-app.get("/", (req, res) => {
-    res.send("<h1> Hello from Auth0! </h1>");
+app.get("/api/v1/home", (req, res) => {
+    res.json({
+        message: "Welcome to the API"
+    });
+    return ;
 });
 
 module.exports = app;
