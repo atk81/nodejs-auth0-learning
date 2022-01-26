@@ -3,12 +3,16 @@ require('./config/database').connect(); // Load database configuration
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
+const auth = require('./middleware/auth');
 
 const User = require('./models/User');
 
 const app = express();
 // Add a middleware to accept json data
 app.use(express.json());
+// Add a middleware to accept cookies
+app.use(cookieParser());
 
 app.get("/api/v1/register", async (req, res) => {
     let {firstname, lastname, email, password} = req.body;
@@ -66,7 +70,7 @@ app.get("/api/v1/register", async (req, res) => {
             message: "Something went wrong"
         });
     }
-})
+});
 
 app.get("/api/v1/login", async (req, res) => {
     let { email, password } = req.body;
@@ -110,7 +114,7 @@ app.get("/api/v1/login", async (req, res) => {
 
         userExits.token = token;
         userExits.password = undefined // Remove password from response
-
+        res.cookie('token', token, { httpOnly: true, maxAge: 3600000 });
         res.status(200).json(userExits);
         return;
     } catch (error) {
@@ -119,7 +123,25 @@ app.get("/api/v1/login", async (req, res) => {
             message: "Something went wrong"
         });
     }
-})
+});
+
+app.get("/api/v1/dashboard", auth, async(req,res)=>{
+    try {
+        const user = await User.findOne({ _id: req.user_id });
+        // console.log(user);
+        // console.log(req.user_id);
+        user.password = undefined;
+        res.status(200).json({
+            message: "Welcome to dashboard, you are logged in",
+            user,
+        });
+    } catch (error) {
+        console.log(error);
+        res.send(500).json({
+            message: "Something went wrong"
+        });
+    }
+});
 
 app.get("/", (req, res) => {
     res.send("<h1> Hello from Auth0! </h1>");
